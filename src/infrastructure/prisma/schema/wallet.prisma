@@ -1,0 +1,130 @@
+enum WalletTransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum AccountType {
+  BANK_ACCOUNT
+  ESEWA
+  KHALTI
+}
+
+enum PayoutType {
+  ADMIN_SETTLEMENT
+  PROVIDER_WITHDRAWAL
+}
+
+enum PayoutMethod {
+  BANK_TRANSFER
+  ESEWA
+  KHALTI
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model ProviderPaymentAccount {
+  id                String      @id @default(uuid())
+  providerId        String      @map("provider_id")
+  accountType       AccountType @map("account_type")
+  accountNumber     String      @map("account_number")
+  bankName          String?     @map("bank_name")
+  bankBranch        String?     @map("bank_branch")
+  accountHolderName String      @map("account_holder_name")
+  walletIdNumber    String?     @map("wallet_id_number")
+  isActive          Boolean     @default(true) @map("is_active")
+
+  provider Provider @relation(fields: [providerId], references: [id])
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  payouts Payout[]
+
+  @@index([providerId, isActive])
+  @@index([providerId, accountType])
+  @@index([accountType, isActive])
+  @@map("provider_payment_accounts")
+}
+
+model ProviderWallet {
+  id               String  @id @default(uuid())
+  providerId       String  @unique @map("provider_id")
+  availableBalance Decimal @default(0.00) @map("available_balance") @db.Decimal(10, 2)
+  lockedBalance    Decimal @default(0.00) @map("locked_balance") @db.Decimal(10, 2)
+  totalWithdrawn   Decimal @default(0.00) @map("total_withdrawn") @db.Decimal(10, 2)
+  isActive         Boolean @default(true) @map("is_active")
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  providerTransactions ProviderWalletTransaction[]
+  payouts              Payout[]
+
+  @@index([isActive])
+  @@map("provider_wallets")
+}
+
+model ProviderWalletTransaction {
+  id              String                @id @default(uuid())
+  walletId        String                @map("wallet_id")
+  transactionType WalletTransactionType @map("transaction_type")
+  amount          Decimal               @db.Decimal(10, 2)
+  jobId           String?               @map("job_id")
+  payoutId        String?               @map("payout_id")
+  balanceBefore   Decimal               @map("balance_before") @db.Decimal(10, 2)
+  balanceAfter    Decimal               @map("balance_after") @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  wallet ProviderWallet @relation(fields: [walletId], references: [id])
+  job    Job?           @relation(fields: [jobId], references: [id])
+  payout Payout?        @relation(fields: [payoutId], references: [id])
+
+
+  @@index([walletId, createdAt])
+  @@index([walletId, transactionType, createdAt])
+  @@index([jobId])
+  @@index([payoutId])
+  @@map("provider_wallet_transactions")
+}
+
+model Payout {
+  id                     String       @id @default(uuid())
+  providerId             String       @map("provider_id")
+  walletId               String       @map("wallet_id")
+  amount                 Decimal      @db.Decimal(10, 2)
+  payoutType             PayoutType   @map("payout_type")
+  payoutMethod           PayoutMethod @map("payout_method")
+  status                 PayoutStatus @default(PENDING) @map("status")
+  paymentAccountId       String?      @map("payment_account_id")
+  initiatedBy            String?      @map("initiated_by")
+  initiatedByType        String?      @map("initiated_by_type")
+  paymentAccountSnapshot Json?        @map("payment_account_snapshot")
+  processedAt            DateTime?    @map("processed_at")
+  settledAt              DateTime?    @map("settled_at")
+  createdAt              DateTime     @default(now()) @map("created_at")
+  deletedAt              DateTime?    @map("deleted_at")
+
+  provider             Provider                    @relation(fields: [providerId], references: [id])
+  wallet               ProviderWallet              @relation(fields: [walletId], references: [id])
+  paymentAccount       ProviderPaymentAccount?     @relation(fields: [paymentAccountId], references: [id])
+  providerTransactions ProviderWalletTransaction[]
+
+  @@index([providerId, createdAt])
+  @@index([providerId, status, createdAt])
+  @@index([walletId, createdAt])
+  @@index([status, createdAt])
+  @@index([paymentAccountId])
+  @@index([initiatedBy, createdAt])
+  @@map("payouts")
+}

@@ -1,0 +1,223 @@
+enum SeverityLevel {
+  MINOR
+  MODERATE
+  MAJOR
+  EMERGENCY
+}
+
+enum JobStatus {
+  PENDING
+  PROVIDER_ASSIGNED
+  IN_PROGRESS
+  PENDING_FINAL_PAYMENT
+  COMPLETED
+  CANCELLED
+}
+
+enum IssueStarted {
+  TODAY
+  YESTERDAY
+  LAST_WEEK
+  OVER_A_WEEK
+  OVER_A_MONTH
+  OVER_A_YEAR
+  LAST_MONTH
+}
+
+enum JobWorkSessionStatus {
+  ARRIVED
+  STARTED
+  COMPLETED
+  PENDING
+  IN_PROGRESS
+  CANCELLED
+}
+
+enum JobRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum UploadStage {
+  REQUEST_PHASE
+  BEFORE_WORK
+  AFTER_WORK
+}
+
+model Category {
+  id            String        @id @default(uuid())
+  name          String
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  jobs          Job[]
+  subCategories SubCategory[]
+
+  @@index([name])
+  @@index([deletedAt])
+  @@map("categories")
+}
+
+model SubCategory {
+  id         String                 @id @default(uuid())
+  categoryId String                 @map("category_id")
+  name       String
+  category   Category               @relation(fields: [categoryId], references: [id])
+  jobs       JobSubCategoryBridge[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([categoryId])
+  @@index([name])
+  @@index([deletedAt])
+  @@map("sub_categories")
+}
+
+model JobSubCategoryBridge {
+  jobId         String   @map("job_id")
+  subCategoryId String   @map("sub_category_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  job         Job         @relation(fields: [jobId], references: [id])
+  subCategory SubCategory @relation(fields: [subCategoryId], references: [id])
+
+  @@id([jobId, subCategoryId])
+  @@index([subCategoryId, jobId])
+  @@map("job_sub_category_bridge")
+}
+
+model Job {
+  id                  String        @id @default(uuid())
+  categoryId          String        @map("category_id")
+  customerId          String        @map("customer_id")
+  providerId          String?       @map("provider_id")
+  severityLevel       SeverityLevel @map("severity_level")
+  issueStarted        IssueStarted  @map("issue_started")
+  description         String        @db.Text
+  customerAddressId   String        @map("customer_address_id")
+  status              JobStatus     @default(PENDING) @map("status")
+  isRecurring         Boolean       @default(false) @map("is_recurring")
+  specialInstructions String?       @map("special_instructions") @db.Text
+  estimatedBudget     Decimal?      @map("estimated_budget") @db.Decimal(10, 2)
+  scheduledDate       DateTime?     @map("scheduled_date")
+  scheduledTimeWindow String?       @map("scheduled_time_window")
+  isUrgent            Boolean       @default(false) @map("is_urgent")
+
+  createdAt            DateTime                    @default(now()) @map("created_at")
+  updatedAt            DateTime                    @updatedAt @map("updated_at")
+  deletedAt            DateTime?                   @map("deleted_at")
+  category             Category                    @relation(fields: [categoryId], references: [id])
+  customer             Customer                    @relation(fields: [customerId], references: [id])
+  provider             Provider?                   @relation(fields: [providerId], references: [id])
+  subCategories        JobSubCategoryBridge[]
+  jobRequests          JobRequest[]
+  jobWorkSessions      JobWorkSession[]
+  jobMedias            JobMedia[]
+  bids                 Bid[]
+  providerTransactions ProviderWalletTransaction[]
+  providerReviews      ProviderReview[]
+  payments             Payment[]
+
+  @@index([categoryId])
+  @@index([customerId])
+  @@index([providerId])
+  @@index([customerAddressId])
+  @@index([status])
+  @@index([severityLevel])
+  @@index([scheduledDate])
+  @@index([createdAt])
+  @@index([status, scheduledDate])
+  @@index([categoryId, status, scheduledDate])
+  @@index([providerId, status, scheduledDate])
+  @@index([customerId, createdAt])
+  @@index([deletedAt])
+
+  @@map("jobs")
+}
+
+model Bid {
+  id           String           @id @default(uuid())
+  jobId        String           @map("job_id")
+  providerId   String           @map("provider_id")
+  offeredPrice Decimal          @map("offered_price") @db.Decimal(10, 2)
+  message      String?          @db.Text
+  status       JobRequestStatus @default(PENDING) @map("status")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  job      Job      @relation(fields: [jobId], references: [id])
+  provider Provider @relation(fields: [providerId], references: [id])
+
+  @@index([jobId])
+  @@index([providerId])
+  @@index([providerId, status, createdAt])
+  @@index([jobId, status, createdAt])
+  @@map("bids")
+}
+
+model JobRequest {
+  id         String           @id @default(uuid())
+  jobId      String           @map("job_id")
+  providerId String           @map("provider_id")
+  status     JobRequestStatus @default(PENDING) @map("status")
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  job      Job      @relation(fields: [jobId], references: [id])
+  provider Provider @relation(fields: [providerId], references: [id])
+
+  @@index([jobId])
+  @@index([providerId])
+  @@index([jobId, status])
+  @@index([providerId, status, createdAt])
+
+  @@map("job_requests")
+}
+
+model JobWorkSession {
+  id                String    @id @default(uuid())
+  jobId             String    @map("job_id")
+  startTime         DateTime  @map("start_time")
+  endTime           DateTime  @map("end_time")
+  providerArrivedAt DateTime? @map("provider_arrived_at")
+  notes             String?   @db.Text
+
+  status       JobWorkSessionStatus                  @default(ARRIVED) @map("status")
+  createdAt    DateTime                              @default(now()) @map("created_at")
+  updatedAt    DateTime                              @updatedAt @map("updated_at")
+  locationGeom Unsupported("geometry(Point, 4326)")? @map("location_geom")
+
+  job Job @relation(fields: [jobId], references: [id])
+  // provider Provider @relation(fields: [providerId], references: [id])
+
+  @@index([jobId])
+  @@index([jobId, status])
+  @@index([jobId, startTime])
+  @@index([status, startTime])
+  @@map("job_work_sessions")
+}
+
+model JobMedia {
+  id          String      @id @default(uuid())
+  jobId       String      @map("job_id")
+  mediaUrl    String      @map("media_url")
+  mimeType    String      @map("mime_type")
+  uploadStage UploadStage @map("upload_stage")
+  uploadedBy  String      @map("uploaded_by")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  uploadedAt  DateTime    @default(now()) @map("uploaded_at")
+
+  job Job @relation(fields: [jobId], references: [id])
+
+
+  @@index([jobId])
+  @@index([jobId, uploadStage])
+  @@index([uploadedBy, createdAt])
+  @@map("job_medias")
+}

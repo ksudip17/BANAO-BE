@@ -1,0 +1,83 @@
+model BlogCategory {
+  id    String  @id @default(uuid())
+  name  String
+  slug  String  @unique
+  image String?
+
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  blogs Blog[]
+
+  @@index([isActive])
+  @@index([deletedAt])
+  @@index([isActive, deletedAt])
+  @@map("blog_categories")
+}
+
+model Blog {
+  id          String    @id @default(uuid())
+  title       String
+  slug        String    @unique
+  content     String
+  summary     String?
+  excerpt     String?
+  description String?
+  isPopular   Boolean   @default(false) @map("is_popular")
+  isFeatured  Boolean   @default(false) @map("is_featured")
+  isPublished Boolean   @default(false) @map("is_published")
+  publishedAt DateTime? @map("published_at")
+
+  categoryId String       @map("category_id")
+  category   BlogCategory @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  blogMedia BlogMedia[]
+
+
+  @@index([categoryId])
+  @@index([deletedAt])
+  @@index([isPublished, publishedAt])
+  @@index([isFeatured, publishedAt])
+  @@index([isPopular, publishedAt])
+  @@index([categoryId, isPublished, publishedAt])
+  @@map("blogs")
+}
+
+model BlogMedia {
+  id        String   @id @default(uuid())
+  blogId    String   @map("blog_id")
+  mediaId   String   @map("media_id")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  blog  Blog  @relation(fields: [blogId], references: [id])
+  media Media @relation(fields: [mediaId], references: [id])
+
+
+  @@index([blogId])
+  @@index([mediaId])
+  @@index([blogId, sortOrder])
+  @@map("blog_media")
+}
+
+model Media {
+  id        String   @id @default(uuid())
+  filename  String
+  fileUrl   String   @map("file_url")
+  mimeType  String   @map("mime_type")
+  size      Int
+  alt       String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  blogMedia BlogMedia[]
+
+  @@map("media")
+}

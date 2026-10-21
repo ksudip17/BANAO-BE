@@ -1,0 +1,135 @@
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+  BANNED
+  DEACTIVATED
+  DELETED
+}
+
+enum UserType {
+  CUSTOMER
+  PROVIDER
+  ADMIN
+  EMPLOYEE
+}
+
+model User {
+  id                   String     @id @default(uuid())
+  fullName             String     @map("full_name")
+  email                String     @unique
+  phone                String
+  password             String
+  avatar               String?
+  status               UserStatus @default(PENDING_VERIFICATION)
+  userType             UserType
+  twoFactorAuthEnabled Boolean    @default(false) @map("two_factor_auth_enabled")
+  emailVerifiedAt      DateTime?   @map("email_verified_at")
+  phoneVerifiedAt      DateTime?   @map("phone_verified_at")
+  createdAt            DateTime   @default(now()) @map("created_at")
+  updatedAt            DateTime   @updatedAt @map("updated_at")
+  deletedAt            DateTime?  @map("deleted_at")
+
+  customer      Customer?
+  provider      Provider?
+  adminEmployee AdminEmployee?
+  userRoles     UserRole[]
+
+  @@index([status, createdAt])
+  @@index([phone])
+  @@index([deletedAt])
+
+  @@map("users")
+}
+
+model AdminEmployee {
+  id           String  @id @default(uuid())
+  userId       String  @unique @map("user_id")
+  employeeCode String  @unique @map("employee_code")
+  department   String
+  isActive     Boolean @default(true) @map("is_active")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // processedPayouts Payout[]
+  // moderatedReviews ProviderReview[]
+
+  @@map("admin_employees")
+}
+
+model Customer {
+  id             String  @id @default(uuid())
+  userId         String  @unique @map("user_id")
+  total_bookings Int     @default(0) @map("total_bookings")
+  total_spent    Decimal @default(0.00) @map("total_spent") @db.Decimal(10, 2)
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs            Job[]
+  providerReviews ProviderReview[]
+  payments        Payment[]
+
+  @@map("customers")
+}
+
+model CustomerAddress {
+  id               String                               @id @default(uuid())
+  customerId       String                               @map("customer_id")
+  label            String
+  fullAddress      String                               @map("full_address")
+  locationGeometry Unsupported("geometry(Point, 4326)") @map("location_geometry")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("customer_addresses")
+}
+
+model Provider {
+  id            String  @id @default(uuid())
+  userId        String  @unique @map("user_id")
+  averageRating Decimal @default(0.00) @map("average_rating") @db.Decimal(3, 2)
+  totalReviews  Int     @default(0) @map("total_reviews")
+  isVerified    Boolean @default(false) @map("is_verified")
+
+  workingLocationGeometry Unsupported("geometry(Point, 4326)")? @map("working_location_geometry")
+  workingLocationAddress  String?                               @map("working_location_address")
+  serviceRadiusKm         Int?                                  @map("service_radius_km")
+  totalJobsCompleted      Int                                   @default(0) @map("total_jobs_completed")
+  totalEarnings           Decimal                               @default(0.00) @map("total_earnings") @db.Decimal(10, 2)
+  hourlyRate              Decimal                               @default(0.00) @map("hourly_rate") @db.Decimal(10, 2)
+  experience              String                                @map("experience")
+
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs                    Job[]
+  providerPaymentAccounts ProviderPaymentAccount[]
+  providerWallet          ProviderWallet?
+  jobRequests             JobRequest[]
+  providerTimeSlots       ProviderTimeSlot[]
+  bids                    Bid[]
+  payouts                 Payout[]
+  providerReviews         ProviderReview[]
+  payments                Payment[]
+
+  @@index([averageRating(sort: Desc)])
+  @@map("providers")
+}
+
+model ProviderReview {
+  id                String   @id @default(uuid())
+  providerId        String   @map("provider_id")
+  jobId             String   @map("job_id")
+  customerId        String   @map("customer_id")
+  rating            Int
+  comment           String?  @db.Text
+  isPublished       Boolean  @default(false) @map("is_published")
+  moderatedBy       String?  @map("moderated_by")
+  moderationComment String?  @map("moderation_comment") @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  provider Provider @relation(fields: [providerId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+  job      Job      @relation(fields: [jobId], references: [id])
+
+  @@map("provider_reviews")
+}

@@ -1,0 +1,24 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// enum UserStatus { ACTIVE, INACTIVE, SUSPENDED, PENDING_VERIFICATION, BANNED, DEACTIVATED, DELETED }
+// enum UserType { ADMIN, PROVIDER, CUSTOMER }
+// enum BillingType { FIXED_PRICE, HOURLY }
+// 
+// enum PaymentPurpose { INITIAL_DEPOSIT, OVERTIME_ADJUSTMENT, SCOPE_CHANGE, FINAL_PAYMENT }
+// enum PaymentStatus { PENDING, PROCESSING, COMPLETED, FAILED, REFUNDED }
+// enum TransactionType { CREDIT, DEBIT }
+// enum PayoutStatus { PENDING, PROCESSING, COMPLETED, FAILED }
+// enum UploadStage { REQUEST_PHASE, BEFORE_WORK, AFTER_WORK }
+// enum AccountType { BANK_ACCOUNT, ESEWA, KHALTI }

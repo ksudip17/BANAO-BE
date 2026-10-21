@@ -1,0 +1,52 @@
+enum PaymentMethod {
+  CARD
+  ESEWA
+  KHALTI
+
+  WALLET
+  NET_BANKING
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentPurpose {
+  INITIAL_DEPOSIT
+  OVERTIME_ADJUSTMENT
+  SCOPE_CHANGE
+  FINAL_PAYMENT
+}
+
+model Payment {
+  id                       String         @id @default(uuid())
+  customerId               String         @map("customer_id")
+  providerId               String         @map("provider_id")
+  jobId                    String         @map("job_id")
+  totalAmount              Decimal        @map("total_amount") @db.Decimal(10, 2)
+  platformCommissionAmount Decimal        @map("platform_commission_amount") @db.Decimal(10, 2)
+  paymentPurpose           PaymentPurpose @map("payment_purpose")
+  netPayableAmount         Decimal        @map("net_payable_amount") @db.Decimal(10, 2)
+  status                   PaymentStatus  @default(PENDING) @map("status")
+  paymentMethod            PaymentMethod  @map("payment_method")
+  createdAt                DateTime       @default(now()) @map("created_at")
+  updatedAt                DateTime       @updatedAt @map("updated_at")
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  provider Provider @relation(fields: [providerId], references: [id])
+  job      Job      @relation(fields: [jobId], references: [id])
+
+  @@index([customerId, createdAt])
+  @@index([providerId, createdAt])
+  @@index([jobId, createdAt])
+  @@index([status, createdAt])
+  @@index([jobId, paymentPurpose])
+  @@index([providerId, status, createdAt])
+
+  @@map("payments")
+}

@@ -1,0 +1,98 @@
+enum SlotType {
+  STANDARD
+  EMERGENCY
+}
+
+enum TimeSlotExceptionType {
+  HOLIDAY
+  UNAVAILABLE
+  MAINTENANCE
+}
+
+enum DayOfWeek {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+model TimeSlot {
+  id                String             @id @default(uuid())
+  displayLabel      String             @map("display_label")
+  startTime         DateTime           @map("start_time")
+  endTime           DateTime           @map("end_time")
+  slotType          SlotType           @map("slot_type")
+  isActive          Boolean            @default(true) @map("is_active")
+  providerTimeSlots ProviderTimeSlot[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([slotType, startTime])
+  @@index([isActive, startTime])
+  @@index([deletedAt])
+
+  @@map("time_slots")
+}
+
+model ProviderTimeSlot {
+  id         String  @id @default(uuid())
+  providerId String  @map("provider_id")
+  timeSlotId String  @map("time_slot_id")
+  isActive   Boolean @default(true) @map("is_active")
+
+  provider Provider @relation(fields: [providerId], references: [id])
+  timeSlot TimeSlot @relation(fields: [timeSlotId], references: [id])
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  providerTimeSlotExceptions ProviderTimeSlotException[]
+  providerTimeSlotDays       ProviderTimeSlotDay[]
+
+  @@index([providerId, isActive])
+  @@index([timeSlotId, providerId])
+  @@index([deletedAt])
+  @@map("provider_time_slots")
+}
+
+model ProviderTimeSlotDay {
+  id                 String    @id @default(uuid())
+  providerTimeSlotId String    @map("provider_time_slot_id")
+  dayOfWeek          DayOfWeek @map("day_of_week")
+  isActive           Boolean   @default(true) @map("is_active")
+
+  providerTimeSlot ProviderTimeSlot @relation(fields: [providerTimeSlotId], references: [id])
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
+
+  @@index([providerTimeSlotId, dayOfWeek])
+  @@index([dayOfWeek, isActive])
+  @@index([deletedAt])
+  @@map("provider_time_slot_days")
+}
+
+model ProviderTimeSlotException {
+  id                 String                @id @default(uuid())
+  providerTimeSlotId String                @map("provider_time_slot_id")
+  exceptionDate      DateTime              @map("exception_date")
+  isActive           Boolean               @default(true) @map("is_active")
+  type               TimeSlotExceptionType @map("type")
+
+  providerTimeSlot ProviderTimeSlot @relation(fields: [providerTimeSlotId], references: [id])
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
+
+  @@index([providerTimeSlotId, exceptionDate])
+  @@index([exceptionDate, isActive])
+  @@index([deletedAt])
+
+  @@map("provider_time_slot_exceptions")
+}
